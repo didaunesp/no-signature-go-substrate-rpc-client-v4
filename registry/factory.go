@@ -391,12 +391,15 @@ type BifrostDecoderFactory struct {
 }
 
 func NewBifrostDecoderFactory() *BifrostDecoderFactory {
-	return &BifrostDecoderFactory{
+	bdf := &BifrostDecoderFactory{
 		f: NewFactory().(*factory),
 	}
+	bdf.f.resetStorages()
+	return bdf
 }
 
 func (bdf *BifrostDecoderFactory) GetDecoder(meta *types.Metadata, typeDef types.Si1TypeDef) (FieldDecoder, error) {
+	bifrostDecoder := &BifrostDecoder{}
 
 	fieldDecoderMap := make(map[byte]FieldDecoder)
 
@@ -423,9 +426,9 @@ func (bdf *BifrostDecoderFactory) GetDecoder(meta *types.Metadata, typeDef types
 		fieldDecoderMap[byte(variant.Index)] = compositeDecoder
 	}
 
-	return &BifrostDecoder{
-		FieldDecoderMap: fieldDecoderMap,
-	}, nil
+	bifrostDecoder.FieldDecoderMap = fieldDecoderMap
+
+	return bifrostDecoder, nil
 }
 
 // getFieldDecoder returns the FieldDecoder based on the provided type definition.

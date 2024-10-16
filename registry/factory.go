@@ -386,6 +386,48 @@ func (f *factory) getTypeFields(meta *types.Metadata, fields []types.Si1Field) (
 	return typeFields, nil
 }
 
+type BifrostDecoderFactory struct {
+	f *factory
+}
+
+func NewBifrostDecoderFactory() *BifrostDecoderFactory {
+	return &BifrostDecoderFactory{
+		f: NewFactory().(*factory),
+	}
+}
+
+func (bdf *BifrostDecoderFactory) GetDecoder(meta *types.Metadata, typeDef types.Si1TypeDef) (FieldDecoder, error) {
+
+	fieldDecoderMap := make(map[byte]FieldDecoder)
+
+	for _, variant := range typeDef.Variant.Variants {
+		if len(variant.Fields) == 0 {
+			fieldDecoderMap[byte(variant.Index)] = &NoopDecoder{}
+			continue
+		}
+
+		variantName := getVariantName(variant)
+
+		compositeDecoder := &CompositeDecoder{
+			FieldName: variantName,
+		}
+
+		fields, err := bdf.f.getTypeFields(meta, variant.Fields)
+
+		if err != nil {
+			return nil, ErrVariantTypeFieldsRetrieval.WithMsg("variant '%d'", variant.Index).Wrap(err)
+		}
+
+		compositeDecoder.Fields = fields
+
+		fieldDecoderMap[byte(variant.Index)] = compositeDecoder
+	}
+
+	return &BifrostDecoder{
+		FieldDecoderMap: fieldDecoderMap,
+	}, nil
+}
+
 // getFieldDecoder returns the FieldDecoder based on the provided type definition.
 // nolint:funlen
 func (f *factory) getFieldDecoder(

@@ -28,6 +28,11 @@ type VariantDecoder struct {
 	FieldDecoderMap map[byte]FieldDecoder
 }
 
+type VariantDecoderResult struct {
+	FieldName string
+	Value     any
+}
+
 func (v *VariantDecoder) Decode(decoder *scale.Decoder) (any, error) {
 	variantByte, err := decoder.ReadOneByte()
 
@@ -45,7 +50,17 @@ func (v *VariantDecoder) Decode(decoder *scale.Decoder) (any, error) {
 		return variantByte, nil
 	}
 
-	return variantDecoder.Decode(decoder)
+	var fieldName string
+	if _, ok := variantDecoder.(*CompositeDecoder); ok {
+		fieldName = variantDecoder.(*CompositeDecoder).FieldName
+	}
+
+	value, err := variantDecoder.Decode(decoder)
+	if err != nil {
+		return nil, err
+	}
+
+	return VariantDecoderResult{fieldName, value}, nil
 }
 
 type BifrostDecoder struct {

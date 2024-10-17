@@ -63,45 +63,6 @@ func (v *VariantDecoder) Decode(decoder *scale.Decoder) (any, error) {
 	return VariantDecoderResult{fieldName, value}, nil
 }
 
-type BifrostDecoder struct {
-	FieldDecoderMap map[byte]FieldDecoder
-}
-
-type BifrostDecodedResult struct {
-	FieldName string
-	Value     any
-}
-
-func (b *BifrostDecoder) Decode(decoder *scale.Decoder) (any, error) {
-	variantByte, err := decoder.ReadOneByte()
-
-	if err != nil {
-		return nil, ErrVariantByteDecoding.Wrap(err)
-	}
-
-	variantDecoder, ok := b.FieldDecoderMap[variantByte]
-
-	if !ok {
-		return nil, ErrVariantFieldDecoderNotFound.WithMsg("variant '%d'", variantByte)
-	}
-
-	if _, ok := variantDecoder.(*NoopDecoder); ok {
-		return variantByte, nil
-	}
-
-	var fieldName string
-	if _, ok := variantDecoder.(*CompositeDecoder); ok {
-		fieldName = variantDecoder.(*CompositeDecoder).FieldName
-	}
-
-	value, err := variantDecoder.Decode(decoder)
-	if err != nil {
-		return nil, err
-	}
-
-	return BifrostDecodedResult{fieldName, value}, nil
-}
-
 // ArrayDecoder holds information about the length of the array and the FieldDecoder used for its items.
 type ArrayDecoder struct {
 	Length      uint
